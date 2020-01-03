@@ -1,0 +1,42 @@
+name: sequential-knowledge-transformer
+channels:
+  - defaults
+dependencies:
+  - cudatoolkit=10.0
+  - cudnn=7.6.0
+  - python=3.6.8
+  - pip=19.1
+  - pip:
+    - tensorflow-gpu==2.0.0
+    - tensorflow-probability==0.8.0
+    - tensorflow-addons==0.6.0
+    #- transformers==2.3.0
+    - h5py
+    # For WoW dataset (use latest commit of 2019/5/10)
+    - git+https://github.com/facebookresearch/ParlAI.git@51eada993206f5a5a264288acbddc45f33f219d8
+    - git+https://github.com/rsennrich/subword-nmt.git@18a5c87046d15290a1b7d947449052aa6d2b47cc
+    # For logging
+    - tqdm
+    - better-exceptions
+    - colorlog
+    - colorful
+    # For evaluation
+    - scikit-learn
+    - git+https://github.com/bckim92/language-evaluation.git
+    # For preprocessing
+    - spacy
+    # For linting
+    - pylint
+    - pycodestyle
+    - mypy
+    # For markdown preview
+    - grip
+    # etc
+    - ruamel.yaml
+    - slackclient
+    - more_itertools
+    - isort
+    - pudb
+    - jupyter
+    # https://github.com/tensorflow/probability/issues/552
+    - gast==0.2.2

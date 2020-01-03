@@ -1,0 +1,20 @@
+default:
+  batch_size: 1
+  word_embed_size: 768
+  vocab_size: 30522
+  evaluation_epoch: 0.5
+  num_epochs: 9999
+  init_lr: 0.00002
+  clipnorm: 0.4
+  data_name: "wizard_of_wikipedia"
+  knowledge_loss: 1.0
+  knowledge_label_smoothing: 0.1
+  response_label_smoothing: 0.05
+  ignore_none_gradients: true
+  max_length: 51
+  other_info: "rerun"
+model:
+  use_copy_decoder: true
+  layer_postprocess_dropout: 0.2
+  gumbel_temperature: 0.1
+  kl_loss: 1.0

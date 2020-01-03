@@ -1,0 +1,7 @@
+*.swp
+*.pyc
+.ipynb_checkpoints
+cached
+checkpoints
+bert_pretrained
+tmp
