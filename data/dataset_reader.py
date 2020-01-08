@@ -8,6 +8,11 @@ import tensorflow as tf
 from utils.etc_utils import isnamedtupleinstance
 from data.vocabulary import Vocabulary
 
+_scalar = lambda: tf.TensorShape([])
+_vector = lambda: tf.TensorShape([None])
+_matrix = lambda: tf.TensorShape([None, None])
+_tensor = lambda: tf.TensorShape([None, None, None])
+
 
 class DatasetReader(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -101,3 +106,17 @@ def bucketing(dataset, key_name, batch_size, bucket_width, mode, padded_shapes=N
         batched_dataset = _batching_func(dataset, True)
 
     return batched_dataset
+
+
+def tensor_pad(x, max_lengths):
+    for i, max_length in enumerate(max_lengths):
+        shape = []
+        for j, dim in enumerate(tf.unstack(tf.shape(x))):
+            if i == j:
+                shape.append(max_length - dim)
+            else:
+                shape.append(dim)
+        shape = tf.stack(shape)
+        padding = tf.zeros(shape, dtype=x.dtype)
+        x = tf.concat([x, padding], axis=i)
+    return x

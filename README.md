@@ -12,9 +12,9 @@ Please contact [Byeongchang Kim](https://bckim92.github.io/) if you have any que
 
 ## Reference
 
-If you use this code or dataset as part of any published research, please refer following paper.
+If you use this code or dataset as part of any published research, please refer following paper,
 
-```
+```bibtex
 @inproceedings{Kim:2020:ICLR,
     title="{Sequential Latent Knowledge Selection for Knowledge-Grounded Dialogue}",
     author={Kim, Byeongchang and Ahn, Jaewoo and Kim, Gunhee},
@@ -34,7 +34,7 @@ If you use this code or dataset as part of any published research, please refer 
 
 ### Wizard-of-Wikipedia
 
-To train the model from scratch
+To train the model from scratch,
 ```bash
 python train.py --cfg ymls/default.yml --gpus 0,1 SequentialKnowledgeTransformer
 
@@ -42,9 +42,11 @@ python train.py --cfg ymls/default.yml --gpus 0,1 SequentialKnowledgeTransformer
 python train.py --cfg ymls/default.yml --gpus 0,1 --enable_function False SequentialKnowledgeTransformer
 ```
 
-To run our pretrained model
+To run our pretrained model,
+
+(it will automatically download pretrained checkpoints, or you can manually download at [here](https://drive.google.com/open?id=1lkF1QENr45j0vl-Oja3wEiqkxoNTxkXT))
 ```bash
-python inference.py --cfg ymls/default.yml --gpus 0,1 SequentialKnowledgeTransformer
+python inference.py --cfg ymls/default.yml --gpus 0,1 --test_mode wow SequentialKnowledgeTransformer
 
 # Will show following results
 seen
@@ -73,7 +75,11 @@ TBU
 
 ### Interactive Demo
 
-TBU
+You can have a chat with our SKT agent using following command (trained on Wizard-of-Wikipedia dataset),
+```bash
+python interactive.py --cfg ymls/default.yml --gpus 0 --test_mode wow SequentialKnowledgeTransformer
+```
+
 
 ## Acknowledgement
 
@@ -82,4 +88,4 @@ This work was supported by SKT T-Brain corporation.
 ## License
 
 See [LICENSE.md](LICENSE.md).
- 
+

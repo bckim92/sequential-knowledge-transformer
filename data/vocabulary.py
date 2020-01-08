@@ -29,22 +29,9 @@ BERT_CLS_ID = 101
 BERT_SEP_ID = 102
 BERT_MASK_ID = 103
 
-def load_cached_embedding(cached_fname):
-    if not os.path.exists(cached_fname):
-        colorlog.info("f{cached_fname} not exists. Please run data/cache_word_embedding.py first")
-    with open(cached_fname, 'rb') as fp:
-        embeddings = pickle.load(fp)
-    return embeddings
 
-def cache_embedding(pretrained_embedding, vocab, out_fname):
-    cached_embeddings = {}
-    for word in vocab:
-        embedding = pretrained_embedding(word)
-        if embedding is not None:
-            cached_embeddings[word] = embedding
-
-    with open(out_fname, 'wb') as fp:
-        pickle.dump(cached_embeddings, fp)
+def convert_subword_to_word(sentence):
+    return sentence.replace(' ##', '')
 
 
 class Vocabulary(object):

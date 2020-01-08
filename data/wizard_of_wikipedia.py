@@ -17,7 +17,8 @@ from parlai.core.worlds import create_task
 
 from data.dataset_reader import (
     DatasetReader, string_split, list_of_string_split, bucketing,
-    list_of_list_of_string_split,
+    list_of_list_of_string_split, tensor_pad,
+    _scalar, _vector, _matrix, _tensor,
 )
 from data import vocabulary as data_vocab
 
@@ -25,25 +26,6 @@ from official.bert import tokenization
 
 PARLAI_KNOWLEDGE_SEPARATOR = '__knowledge__'
 BERT_KNOWLEDGE_SEPARATOR = '_ _ knowledge _ _'
-
-_scalar = lambda: tf.TensorShape([])
-_vector = lambda: tf.TensorShape([None])
-_matrix = lambda: tf.TensorShape([None, None])
-_tensor = lambda: tf.TensorShape([None, None, None])
-
-
-def tensor_pad(x, max_lengths):
-    for i, max_length in enumerate(max_lengths):
-        shape = []
-        for j, dim in enumerate(tf.unstack(tf.shape(x))):
-            if i == j:
-                shape.append(max_length - dim)
-            else:
-                shape.append(dim)
-        shape = tf.stack(shape)
-        padding = tf.zeros(shape, dtype=x.dtype)
-        x = tf.concat([x, padding], axis=i)
-    return x
 
 
 class WowDatasetReader(DatasetReader):

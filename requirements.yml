@@ -10,6 +10,8 @@ dependencies:
     - tensorflow-gpu==2.0.0
     - tensorflow-probability==0.8.0
     - tensorflow-addons==0.6.0
+    - torch==1.3.1
+    - numpy==1.16.2  # To resolve conflict btw tf, sklearn and torch
     #- transformers==2.3.0
     - h5py
     # For WoW dataset (use latest commit of 2019/5/10)
@@ -25,6 +27,7 @@ dependencies:
     - git+https://github.com/bckim92/language-evaluation.git
     # For preprocessing
     - spacy
+    - nltk
     # For linting
     - pylint
     - pycodestyle
@@ -33,7 +36,6 @@ dependencies:
     - grip
     # etc
     - ruamel.yaml
-    - slackclient
     - more_itertools
     - isort
     - pudb
