@@ -71,7 +71,24 @@ unseen
 
 ### Holl-E
 
-TBU
+To train the model from scratch,
+```bash
+python train.py --cfg ymls/holle.yml --gpus 0,1 SequentialKnowledgeTransformer
+```
+
+To run our pretrained model,
+
+(it will automatically download pretrained checkpoints, or you can manually download at [here](https://drive.google.com/open?id=1o1-Gv5PScxlSzxW6DyZnSp3gDI5zXOhh) or [here](https://drive.google.com/open?id=13FkCjuC0aBEenlSf-NAAgOfoWVPhqFSc))
+```bash
+python inference.py --cfg ymls/holle.yml --gpus 0,1 --test_mode holle_1 SequentialKnowledgeTransformer
+
+# Will show following results
+
+ # Or you can try it with another checkpoint
+python inference.py --cfg ymls/holle.yml --gpus 0,1 --test_mode holle_2 SequentialKnowledgeTransformer
+
+# Will show following results
+```
 
 ### Interactive Demo
 

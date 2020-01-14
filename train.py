@@ -76,7 +76,8 @@ def main():
     )
     train_dataset, iters_in_train = reader.read('train', mirrored_strategy)
     test_dataset, iters_in_test = reader.read('test', mirrored_strategy)
-    unseen_dataset, iters_in_unseen = reader.read('test_unseen', mirrored_strategy)
+    if hparams.data_name == 'wizard_of_wikipedia':
+        unseen_dataset, iters_in_unseen = reader.read('test_unseen', mirrored_strategy)
     vocabulary = reader.vocabulary
 
     # Build model & optimizer & trainer
@@ -111,7 +112,7 @@ def main():
     for epoch in range(hparams.num_epochs):
         print(hparams.checkpoint_dir)
         base_description = f"(Train) Epoch {epoch}, GPU {hparams.gpus}"
-        train_tqdm = trange(iters_in_train, ncols=70, desc=base_description)
+        train_tqdm = trange(iters_in_train, ncols=120, desc=base_description)
         for current_step in train_tqdm:
             example = next(train_dataset_iter)
             global_step.assign_add(1)
@@ -139,26 +140,30 @@ def main():
                 checkpoint_manager.save(global_step)
 
                 test_loop_outputs = trainer.test_loop(test_dataset, iters_in_test, epoch, 'seen')
-                unseen_loop_outputs = trainer.test_loop(unseen_dataset, iters_in_unseen, epoch, 'unseen')
+                if hparams.data_name == 'wizard_of_wikipedia':
+                    unseen_loop_outputs = trainer.test_loop(unseen_dataset, iters_in_unseen, epoch, 'unseen')
 
                 test_summaries, log_dict = run_wow_evaluation(
                     test_loop_outputs, hparams.checkpoint_dir, 'seen')
-                unseen_summaries, unseen_log_dict = run_wow_evaluation(
-                    unseen_loop_outputs, hparams.checkpoint_dir, 'unseen')
+                if hparams.data_name == 'wizard_of_wikipedia':
+                    unseen_summaries, unseen_log_dict = run_wow_evaluation(
+                        unseen_loop_outputs, hparams.checkpoint_dir, 'unseen')
 
                 # Logging
                 tqdm.write(colorful.bold_green("seen").styled_string)
                 tqdm.write(colorful.bold_red(pformat(log_dict)).styled_string)
-                tqdm.write(colorful.bold_green("unseen").styled_string)
-                tqdm.write(colorful.bold_red(pformat(unseen_log_dict)).styled_string)
+                if hparams.data_name == 'wizard_of_wikipedia':
+                    tqdm.write(colorful.bold_green("unseen").styled_string)
+                    tqdm.write(colorful.bold_red(pformat(unseen_log_dict)).styled_string)
 
                 with file_writer.as_default():
                     for family, test_summary in test_summaries.items():
                         for key, value in test_summary.items():
                             tf.summary.scalar(f'{family}/{key}', value, step=_global_step)
-                    for family, unseen_summary in unseen_summaries.items():
-                        for key, value in unseen_summary.items():
-                            tf.summary.scalar(f'{family}/{key}', value, step=_global_step)
+                    if hparams.data_name == 'wizard_of_wikipedia':
+                        for family, unseen_summary in unseen_summaries.items():
+                            for key, value in unseen_summary.items():
+                                tf.summary.scalar(f'{family}/{key}', value, step=_global_step)
 
                 if hparams.keep_best_checkpoint:
                     current_score = log_dict["rouge1"]

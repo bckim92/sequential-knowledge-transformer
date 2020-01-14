@@ -4,6 +4,8 @@ from pprint import PrettyPrinter
 import random
 import numpy as np
 
+import torch  # Torch must be imported before sklearn and tf
+import sklearn
 import tensorflow as tf
 import better_exceptions
 from tqdm import tqdm, trange
@@ -17,6 +19,7 @@ from modules.checkpoint_tracker import CheckpointTracker
 from modules.trainer import run_wow_evaluation, Trainer
 from modules.from_parlai import download_from_google_drive, unzip
 from data.wizard_of_wikipedia import WowDatasetReader
+from data.holle import HolleDatasetReader
 
 better_exceptions.hook()
 _command_args = config_utils.CommandArgs()
@@ -42,8 +45,26 @@ def main():
             download_from_google_drive(gd_id, os.path.join('tmp', fname))
             unzip('tmp', fname)
         ckpt_fname = os.path.join('tmp/wow_pretrained', 'ckpt-46070')
+    elif hparams.test_mode == "holle_1":
+        os.makedirs('./tmp', exist_ok=True)
+        if not os.path.exists('tmp/holle_pretrained_1'):
+            fname = 'holle_pretrained_1.zip'
+            gd_id = '1o1-Gv5PScxlSzxW6DyZnSp3gDI5zXOhh'
+            colorlog.info(f"Download pretrained checkpoint {fname}")
+            download_from_google_drive(gd_id, os.path.join('tmp', fname))
+            unzip('tmp', fname)
+        ckpt_fname = os.path.join('tmp/holle_pretrained_1', 'ckpt-1th-best')
+    elif hparams.test_mode == "holle_2":
+        os.makedirs('./tmp', exist_ok=True)
+        if not os.path.exists('tmp/holle_pretrained_2'):
+            fname = 'holle_pretrained_2.zip'
+            gd_id = '13FkCjuC0aBEenlSf-NAAgOfoWVPhqFSc'
+            colorlog.info(f"Download pretrained checkpoint {fname}")
+            download_from_google_drive(gd_id, os.path.join('tmp', fname))
+            unzip('tmp', fname)
+        ckpt_fname = os.path.join('tmp/holle_pretrained_2', 'ckpt-1th-best')
     else:
-        raise ValueError("Only 'wow' is currently supported")
+        raise ValueError("'wow' and 'holle' is currently supported")
 
     # Set environment variables & gpus
     set_logger()
@@ -67,7 +88,13 @@ def main():
 
     # Make dataset reader
     os.makedirs(hparams.cache_dir, exist_ok=True)
-    reader = WowDatasetReader(
+    if hparams.data_name == 'wizard_of_wikipedia':
+        reader_cls = WowDatasetReader
+    elif hparams.data_name == 'holle':
+        reader_cls = HolleDatasetReader
+    else:
+        raise ValueError("data_name must be one of 'wizard_of_wikipedia' and 'holle'")
+    reader = reader_cls(
         hparams.batch_size, hparams.num_epochs,
         buffer_size=hparams.buffer_size,
         bucket_width=hparams.bucket_width,
@@ -80,7 +107,8 @@ def main():
     )
     train_dataset, iters_in_train = reader.read('train', mirrored_strategy)
     test_dataset, iters_in_test = reader.read('test', mirrored_strategy)
-    unseen_dataset, iters_in_unseen = reader.read('test_unseen', mirrored_strategy)
+    if hparams.data_name == 'wizard_of_wikipedia':
+        unseen_dataset, iters_in_unseen = reader.read('test_unseen', mirrored_strategy)
     vocabulary = reader.vocabulary
 
     # Build model & optimizer & trainer
@@ -112,18 +140,21 @@ def main():
 
     # Test
     test_loop_outputs = trainer.test_loop(test_dataset, iters_in_test, 0, 'seen')
-    unseen_loop_outputs = trainer.test_loop(unseen_dataset, iters_in_unseen, 0, 'unseen')
+    if hparams.data_name == 'wizard_of_wikipedia':
+        unseen_loop_outputs = trainer.test_loop(unseen_dataset, iters_in_unseen, 0, 'unseen')
 
     test_summaries, log_dict = run_wow_evaluation(
         test_loop_outputs, hparams.checkpoint_dir, 'seen')
-    unseen_summaries, unseen_log_dict = run_wow_evaluation(
-        unseen_loop_outputs, hparams.checkpoint_dir, 'unseen')
+    if hparams.data_name == 'wizard_of_wikipedia':
+        unseen_summaries, unseen_log_dict = run_wow_evaluation(
+            unseen_loop_outputs, hparams.checkpoint_dir, 'unseen')
 
     # Logging
     tqdm.write(colorful.bold_green("seen").styled_string)
     tqdm.write(colorful.bold_red(pformat(log_dict)).styled_string)
-    tqdm.write(colorful.bold_green("unseen").styled_string)
-    tqdm.write(colorful.bold_red(pformat(unseen_log_dict)).styled_string)
+    if hparams.data_name == 'wizard_of_wikipedia':
+        tqdm.write(colorful.bold_green("unseen").styled_string)
+        tqdm.write(colorful.bold_red(pformat(unseen_log_dict)).styled_string)
 
 
 if __name__ == '__main__':
