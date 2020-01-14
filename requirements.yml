@@ -26,7 +26,7 @@ dependencies:
     - scikit-learn
     - git+https://github.com/bckim92/language-evaluation.git
     # For preprocessing
-    - spacy
+    - spacy==2.1.8
     - nltk
     # For linting
     - pylint
