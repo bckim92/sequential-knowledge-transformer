@@ -68,6 +68,7 @@ class WowDatasetReader(DatasetReader):
         self._pad_to_max = pad_to_max
         self._bert_dir = bert_dir
         self._vocab_fname = os.path.join(self._bert_dir, 'vocab.txt')
+        self._datapath = os.path.join(self._cache_dir, 'wizard_of_wikipedia')
 
     @property
     def vocabulary(self) -> data_vocab.Vocabulary:
@@ -91,7 +92,7 @@ class WowDatasetReader(DatasetReader):
             return self._read(mode, self._batch_size)
 
     def _read(self, mode: str, batch_size: int) -> tf.data.Dataset:
-        episodes, dictionary = self._load_wow_from_parlai(mode)
+        episodes, dictionary = self._load_and_preprocess_all(mode)
         num_episodes = len(episodes)
         num_examples = sum([len(episode) for episode in episodes])
         num_iters = int(num_episodes / batch_size)
@@ -221,7 +222,7 @@ class WowDatasetReader(DatasetReader):
 
         return sliced_example
 
-    def _load_wow_from_parlai(self, mode: str):
+    def _load_and_preprocess_all(self, mode: str):
         """
         As default, it returns the following action dict:
         {
@@ -247,8 +248,8 @@ class WowDatasetReader(DatasetReader):
             'episode_done': (Boolean) whether episode is done or not
         }
         """
-        if os.path.exists(self._get_cache_fname(mode)):
-            episodes_fname = self._get_cache_fname(mode)
+        if os.path.exists(self._get_preprocessed_fname(mode)):
+            episodes_fname = self._get_preprocessed_fname(mode)
             colorlog.info(f"Load cached wizard of wikipedia from {episodes_fname}")
             with open(episodes_fname, 'r') as fp:
                 episodes = []
@@ -306,9 +307,9 @@ class WowDatasetReader(DatasetReader):
         opt = parser.parse_args(options, print_args=print_args)
         return opt
 
-    def _get_cache_fname(self, mode):
-        if self._cache_dir:
-            return os.path.join(self._cache_dir, f'{mode}_episodes.json')
+    def _get_preprocessed_fname(self, mode):
+        if self._datapath:
+            return os.path.join(self._datapath, f'{mode}_episodes.json')
         else:
             return None
 
@@ -358,8 +359,8 @@ class WowDatasetReader(DatasetReader):
                 new_examples.append(new_example)
             new_episodes.append(new_examples)
 
-        if self._cache_dir:
-            episodes_fname = self._get_cache_fname(mode)
+        if self._datapath:
+            episodes_fname = self._get_preprocessed_fname(mode)
             colorlog.info(f"Cache preprocessed dataset to {episodes_fname}")
             with open(episodes_fname, 'w') as fp:
                 for episode in new_episodes:
