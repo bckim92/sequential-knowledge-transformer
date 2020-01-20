@@ -106,7 +106,7 @@ python interactive.py --cfg ymls/default.yml --gpus 0 --test_mode wow Sequential
 
 ## Acknowledgement
 
-This work was supported by SKT T-Brain corporation.
+This work was supported by SK T-Brain corporation.
 
 ## License
 
