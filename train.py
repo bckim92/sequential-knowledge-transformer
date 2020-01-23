@@ -4,6 +4,8 @@ from pprint import PrettyPrinter
 import random
 import numpy as np
 
+import torch  # Torch must be imported before sklearn and tf
+import sklearn
 import tensorflow as tf
 import better_exceptions
 from tqdm import tqdm, trange
@@ -17,6 +19,7 @@ from modules.checkpoint_tracker import CheckpointTracker
 from modules.trainer import run_wow_evaluation, Trainer
 from modules.from_parlai import download_from_google_drive, unzip
 from data.wizard_of_wikipedia import WowDatasetReader
+from data.holle import HolleDatasetReader
 
 better_exceptions.hook()
 _command_args = config_utils.CommandArgs()
@@ -63,7 +66,13 @@ def main():
 
     # Make dataset reader
     os.makedirs(hparams.cache_dir, exist_ok=True)
-    reader = WowDatasetReader(
+    if hparams.data_name == "wizard_of_wikipedia":
+        reader_cls = WowDatasetReader
+    elif hparams.data_name == "holle":
+        reader_cls = HolleDatasetReader
+    else:
+        raise ValueError("data_name must be one of 'wizard_of_wikipedia' and 'holle'")
+    reader = reader_cls(
         hparams.batch_size, hparams.num_epochs,
         buffer_size=hparams.buffer_size,
         bucket_width=hparams.bucket_width,
