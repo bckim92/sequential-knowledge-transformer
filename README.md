@@ -106,7 +106,14 @@ python interactive.py --cfg ymls/default.yml --gpus 0 --test_mode wow Sequential
 
 ## Acknowledgement
 
-This work was supported by SK T-Brain corporation.
+We thank [Hyunwoo Kim], [Chris Dongjoo Kim], [Soochan Lee], and [Junsoo Ha] for their helpful comments.
+
+This work was supported by SK T-Brain corporation and Institute of Information & communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No.2019-0-01082, SW StarLab).
+
+[Hyunwoo Kim]: https://hyunw.kim/
+[Chris Dongjoo Kim]: http://vision.snu.ac.kr/people/dongjookim.html
+[Soochan Lee]: https://soochanlee.com/
+[Junsoo Ha]: http://hajunsoo.org/resume/
 
 ## License
 
