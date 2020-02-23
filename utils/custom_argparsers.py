@@ -64,6 +64,6 @@ class DialogArgumentParser(argparse.ArgumentParser):
         # inference
         self.add_argument("--test_mode", type=str, default='wow')
 
-        # unintialized params
+        # uninitialized params
         self.add_argument("--num_gpus", type=int, default=0)
         self.add_argument("--checkpoint_dir", type=str, default="unset")
