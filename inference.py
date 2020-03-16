@@ -86,6 +86,14 @@ def main():
     else:
         mirrored_strategy = None
 
+    # Download BERT pretrained model
+    if not os.path.exists(hparams.bert_dir):
+        os.makedirs(hparams.bert_dir)
+        fname = 'uncased_L-12_H-768_A-12.zip'
+        gd_id = '17rfV9CleFBwwfS7m5Yd72vvxdPLWBHl6'
+        download_from_google_drive(gd_id, os.path.join(hparams.bert_dir, fname))
+        unzip(hparams.bert_dir, fname)
+
     # Make dataset reader
     os.makedirs(hparams.cache_dir, exist_ok=True)
     if hparams.data_name == 'wizard_of_wikipedia':
