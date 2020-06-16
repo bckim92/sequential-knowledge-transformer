@@ -101,7 +101,7 @@ def main():
                                                 clipnorm=hparams.clipnorm)
     trainer = Trainer(model, optimizer, mirrored_strategy,
                       hparams.enable_function,
-                      WowDatasetReader.remove_pad)
+                      reader_cls.remove_pad)
 
     # misc (tensorboard, checkpoints)
     file_writer = tf.summary.create_file_writer(hparams.checkpoint_dir)

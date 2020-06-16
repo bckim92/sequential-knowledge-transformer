@@ -83,14 +83,19 @@ To run our pretrained model,
 python inference.py --cfg ymls/holle.yml --gpus 0,1 --test_mode holle_1 SequentialKnowledgeTransformer
 
 # Will show following results
-{'accuracy': 0.30347923681257016,
- 'kl_loss': 0.4112479,
- 'knowledge_loss': 1.6464717,
- 'perplexity': 51.871777,
- 'rouge1': 0.29467467619580506,
- 'rouge2': 0.2290895058572499,
- 'rougeL': 0.28640943977431726,
- 'total_loss': 6.0064945}
+{'accuracy': 0.3037037037037037,
+ 'accuracy_multi_responses': 0.4033670033670034,
+ 'kl_loss': 0.36722404,
+ 'knowledge_loss': 1.3605422,
+ 'perplexity': 51.95605,
+ 'perplexity_multi_responses': 29.779757,
+ 'rouge1': 0.294273363798098,
+ 'rouge1_multi_responses': 0.3620479996911834,
+ 'rouge2': 0.22867428360364725,
+ 'rouge2_multi_responses': 0.2942280954677095,
+ 'rougeL': 0.28614673266443935,
+ 'rougeL_multi_responses': 0.3524777390233543,
+ 'total_loss': 5.678165}
 
  # Or you can try it with another checkpoint
 python inference.py --cfg ymls/holle.yml --gpus 0,1 --test_mode holle_2 SequentialKnowledgeTransformer

@@ -184,6 +184,9 @@ def run_wow_evaluation(results_dict, checkpoint_dir, mode):
     if 'kl_loss' in results_dict:
         kl_loss = np.mean(results_dict['kl_loss'])
         loss_result['kl_loss'] = kl_loss
+    if 'multi_responses' and 'multi_gt_knowledge_sentences' in results_dict:
+        rouge_result, loss_result = add_multi_results(
+            results_dict, rouge_result, loss_result, predictions, episode_mask, trim_fn)
 
     log_dict = {}
     log_dict.update(rouge_result)
@@ -220,6 +223,63 @@ def _trim_after_eos(sentences, replace_unk=False, mask=None):
         trimmed_sentences.append(trimmed_sentence)
     return trimmed_sentences
 
+def add_multi_results(results_dict, rouge_result, loss_result, predictions, episode_mask, trim_fn):
+    multi_responses = results_dict['multi_responses']
+    num_responses = results_dict['num_responses'][episode_mask]
+    multi_gt_knowledge_sentences = results_dict['multi_gt_knowledge_sentences']
+    knowledge_sent_preds = results_dict['knowledge_sent_pred'][episode_mask]
+
+    multi_rouge_evaluator = language_evaluation.RougeEvaluator(num_parallel_calls=1,
+                                                            tokenization_fn=normalize_answer,
+                                                            average=False)
+    multi_rouge_results_list = []
+    multi_accuracy_list = []
+    for i in range(multi_responses.shape[1]):
+        # choose best rouge scores among multi responses
+        responses = trim_fn(multi_responses[:, i], mask=episode_mask)
+        multi_rouge_result = multi_rouge_evaluator.run_evaluation(predictions, responses)
+        multi_rouge_result['rouge1'][0] = multi_rouge_result['rouge1'][0] * (num_responses > i)
+        multi_rouge_result['rouge2'][0] = multi_rouge_result['rouge2'][0] * (num_responses > i)
+        multi_rouge_result['rougeL'][0] = multi_rouge_result['rougeL'][0] * (num_responses > i)
+        multi_rouge_results_list.append(multi_rouge_result)
+
+        # knowledge accuracy
+        gt_knowledge_sentences = multi_gt_knowledge_sentences[:, i][episode_mask]
+        knowledge_min_length = min(gt_knowledge_sentences.shape[-1], knowledge_sent_preds.shape[-1])
+        multi_accuracy_list.append(np.logical_not(np.logical_not(
+            gt_knowledge_sentences[:,:knowledge_min_length] == \
+            knowledge_sent_preds[:,:knowledge_min_length]).sum(axis=1)))
+    multi_rouge1_results = np.stack([x['rouge1'][0] for x in multi_rouge_results_list], axis=0)
+    multi_rouge2_results = np.stack([x['rouge2'][0] for x in multi_rouge_results_list], axis=0)
+    multi_rougeL_results = np.stack([x['rougeL'][0] for x in multi_rouge_results_list], axis=0)
+    multi_rouge1_results = np.transpose(multi_rouge1_results, [1,0])
+    multi_rouge2_results = np.transpose(multi_rouge2_results, [1,0])
+    multi_rougeL_results = np.transpose(multi_rougeL_results, [1,0])
+    multi_rouge1_max_indices = np.argmax(multi_rouge1_results, axis=1)
+    max_multi_rouge1_results = np.max(multi_rouge1_results, axis=1)
+
+    range_indices = np.arange(len(multi_rouge1_max_indices))
+    max_multi_rouge2_results = multi_rouge2_results[range_indices, multi_rouge1_max_indices]
+    max_multi_rougeL_results = multi_rougeL_results[range_indices, multi_rouge1_max_indices]
+
+    multi_rouge1 = sum(max_multi_rouge1_results) / len(max_multi_rouge1_results)
+    multi_rouge2 = sum(max_multi_rouge2_results) / len(max_multi_rouge2_results)
+    multi_rougeL = sum(max_multi_rougeL_results) / len(max_multi_rougeL_results)
+    rouge_result['rouge1_multi_responses'] = multi_rouge1
+    rouge_result['rouge2_multi_responses'] = multi_rouge2
+    rouge_result['rougeL_multi_responses'] = multi_rougeL
+
+    # accuracy
+    multi_accuracies = np.transpose(np.stack(multi_accuracy_list, axis=0), [1,0])
+    multi_accuracies = multi_accuracies.sum(axis=1).astype(bool)
+    multi_accuracy = sum(multi_accuracies) / len(multi_accuracies)
+    loss_result['accuracy_multi_responses'] = multi_accuracy
+
+    # perplexity
+    multi_perplexity = np.exp(np.mean(results_dict['multi_gen_loss']))
+    loss_result['perplexity_multi_responses'] = multi_perplexity
+
+    return rouge_result, loss_result
 
 __all__ = (
     'run_wow_evaluation',

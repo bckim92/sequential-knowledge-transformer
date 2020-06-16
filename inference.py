@@ -131,7 +131,7 @@ def main():
                                                 clipnorm=hparams.clipnorm)
     trainer = Trainer(model, optimizer, mirrored_strategy,
                       hparams.enable_function,
-                      WowDatasetReader.remove_pad)
+                      reader_cls.remove_pad)
 
     # Setup checkpoint
     global_step = tf.compat.v1.train.get_or_create_global_step()

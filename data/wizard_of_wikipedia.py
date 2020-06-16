@@ -344,7 +344,7 @@ class WowDatasetReader(DatasetReader):
                     # Sometimes, knowledge does not include checked_sentnece
                     idx = None
                     colorlog.warning("Knowledge does not include checked sentence.")
-                if idx:
+                if idx is not None:
                     del knowledges[idx + 1]
 
                 # Tokenize knowledge

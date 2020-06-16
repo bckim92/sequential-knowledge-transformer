@@ -8,6 +8,7 @@ from utils.etc_utils import NEAR_INF
 from utils.config_utils import add_argument
 from utils.custom_argparsers import str2bool
 from data import vocabulary as data_vocab
+from data.holle import _MAX_NUM_MULTI
 from models import BaseModel
 from models.transformer import embedding_layer
 from models.transformer.transformer import TransformerDecoder
@@ -256,6 +257,12 @@ class SequentialKnowledgeTransformer(BaseModel):
                              'answers': answer_words,
                              'context': context_words}
 
+            # code for holle multi responses
+            if self.hparams.data_name == 'holle':
+                results_dict = self.add_multi_results(
+                    inputs, results_dict, batch_size, episode_length,
+                    max_episode_length, knowledge_context_sentences, knowledge_context_encoded
+                )
             return results_dict
 
     def encode(self, sequence, sequence_length, training):
@@ -399,3 +406,92 @@ class SequentialKnowledgeTransformer(BaseModel):
 
         return knowledge_states, (prior_attentions, prior_argmaxes), \
             (posterior_attentions, posterior_argmaxes)
+
+    def add_multi_results(self, inputs, results_dict, batch_size, episode_length,
+                          max_episode_length, knowledge_context_sentences, knowledge_context_encoded):
+        responses = inputs['responses']
+        gt_knowledge_sentences = inputs['gt_knowledge_sentences']
+
+        responses_length = inputs['responses_length']
+        gt_knowledge_length = inputs['gt_knowledge_sentences_length']
+        num_responses = inputs['num_responses']
+        num_gt_knowledges = inputs['num_gt_knowledge_sentences']
+
+        max_responses_length = tf.reduce_max(responses_length)
+        max_num_responses = tf.reduce_max(num_responses)
+        max_gt_knowledge_length = tf.reduce_max(gt_knowledge_length)
+        max_num_gt_knowledges = tf.reduce_max(num_gt_knowledges)
+
+        responses = tf.reshape(responses, [-1, _MAX_NUM_MULTI, tf.shape(responses)[-1]])
+        responses_length = tf.reshape(responses_length, [-1, _MAX_NUM_MULTI])
+        gt_knowledge_sentences = tf.reshape(gt_knowledge_sentences, [-1, _MAX_NUM_MULTI, tf.shape(gt_knowledge_sentences)[-1]])
+        gt_knowledge_length = tf.reshape(gt_knowledge_length, [-1, _MAX_NUM_MULTI])
+
+        num_responses = tf.reshape(num_responses, [-1])
+        num_gt_knowledges = tf.reshape(num_gt_knowledges, [-1])
+
+        multi_gen_loss = self.get_multi_gen_loss(
+            batch_size, episode_length, max_episode_length, responses, responses_length,
+            max_num_responses, knowledge_context_sentences, knowledge_context_encoded
+        )
+        responses = responses[:, :, 1:]
+        padding = tf.zeros([tf.shape(responses)[0],
+                            tf.shape(responses)[1],
+                            self.hparams.max_length - tf.shape(responses)[2] + 1],
+                           dtype=tf.int64)
+        multi_responses_words = self.vocabulary.index_to_string(tf.concat([tf.cast(responses, tf.int64), padding], axis=2))
+        multi_gt_knowledge_words = self.vocabulary.index_to_string(gt_knowledge_sentences)
+        results_dict['multi_responses'] = multi_responses_words
+        results_dict['multi_gt_knowledge_sentences'] = multi_gt_knowledge_words
+        results_dict['num_responses'] = num_responses
+        results_dict['multi_gen_loss'] = multi_gen_loss
+        return results_dict
+
+    def get_multi_gen_loss(self, batch_size, episode_length, max_episode_length,
+                           responses, responses_length, max_num_responses,
+                           knowledge_context_sentences, knowledge_context_encoded):
+        gen_loss_ta = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
+        def _loop_cond(current_response, tensorarrays):
+            return tf.less(current_response, max_num_responses)
+        def _loop_body(current_response, tensorarrays):
+            cand_responses_length = responses_length[:, current_response]
+            max_cand_responses_length = tf.reduce_max(cand_responses_length)
+            cand_responses = responses[:, current_response, :max_cand_responses_length]
+            cand_responses_mask = tf.sequence_mask(cand_responses_length, dtype=tf.float32)
+            cand_responses_embedding = self._embedding(cand_responses)
+            multi_logits, multi_sample_ids = self.decoder(knowledge_context_sentences,
+                                                          knowledge_context_encoded,
+                                                          cand_responses,
+                                                          cand_responses_embedding,
+                                                          training=True)
+            if self.hparams.use_copy_decoder:
+                response_label_smoothing = 0.0
+                gen_loss = softmax_sequence_reconstruction_error(
+                    multi_logits, cand_responses[:, 1:], cand_responses_length - 1, average=True,
+                    average_batch=False, smoothing_rate=response_label_smoothing,
+                    vocab_size=self.hparams.vocab_size)
+            else:
+                gen_loss = self.test_seq_loss(cand_responses[:, 1:], multi_logits, cand_responses_mask[:, 1:])
+            (gen_loss_ta) = tensorarrays
+            gen_loss_ta = gen_loss_ta.write(current_response, gen_loss)
+            tensorarrays = (gen_loss_ta)
+
+            current_response += 1
+
+            return current_response, tensorarrays
+
+        tensorarrays = (gen_loss_ta)
+        loop_vars = [tf.constant(0, dtype=tf.int32), tensorarrays]
+        loop_outputs = tf.while_loop(_loop_cond, _loop_body, loop_vars)
+        (gen_loss_ta) = loop_outputs[1]
+
+        gen_losses = tf.transpose(gen_loss_ta.stack(), perm=[1,0])
+        gen_losses = tf.reshape(gen_losses, [batch_size, max_episode_length, -1])
+        best_gen_loss_index = tf.cast(tf.argmin(gen_losses + tf.cast(tf.equal(gen_losses, 0),
+                                                                     dtype=tf.float32) * NEAR_INF, axis=-1), dtype=tf.int32)
+        i1, i2 = tf.meshgrid(tf.range(batch_size),
+                             tf.range(max_episode_length), indexing="ij")
+        multi_gen_loss = tf.reduce_sum(tf.gather_nd(gen_losses, tf.stack([i1, i2, best_gen_loss_index],axis=-1)), axis=1) \
+            / tf.cast(episode_length, tf.float32)
+
+        return multi_gen_loss
